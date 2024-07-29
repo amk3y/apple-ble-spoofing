@@ -39,6 +39,16 @@ void task_ble_advertisement(void* params){
     adv_params.adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY;
     adv_params.peer_addr_type    = BLE_ADDR_TYPE_PUBLIC;
 
+    esp_power_level_t tx_power_level_distribution[7] = {
+            ESP_PWR_LVL_P21,
+            ESP_PWR_LVL_P21,
+            ESP_PWR_LVL_P21,
+            ESP_PWR_LVL_P21,
+            ESP_PWR_LVL_P18,
+            ESP_PWR_LVL_P18,
+            ESP_PWR_LVL_P15
+    };
+
     ESP_LOGI(TAG_BLE, "start advertising");
     while (1){
         esp_bd_addr_t null_addr = {
@@ -59,14 +69,23 @@ void task_ble_advertisement(void* params){
             vTaskDelete(NULL);
         }
 
+        esp_power_level_t tx_power_level = tx_power_level_distribution[random() % 7];
+        ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, tx_power_level);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG_BLE, "Unable to set tx power level: %s", esp_err_to_name(ret));
+            break;
+        }
+        ESP_LOGI(TAG_BLE, "TX Power Level: %d", tx_power_level);
+
         ret = esp_ble_gap_start_advertising(&adv_params);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG_BLE, "Failed to start advertising: %s", esp_err_to_name(ret));
             break;
         }
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+        vTaskDelay(200 / portTICK_PERIOD_MS);
         esp_ble_gap_stop_advertising();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }
